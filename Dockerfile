@@ -1,6 +1,4 @@
 ### Dockerfile for Laravel on Railway with correct key generation
-
-```dockerfile
 # Use official PHP image with FPM
 FROM php:8.2-fpm
 
