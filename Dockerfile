@@ -1,32 +1,56 @@
-# استخدم إصدار PHP الذي تريده. غيّره إلى 8.1 إذا كان مشروعك يتطلبه
-FROM php:8.2-cli
+### Dockerfile for Laravel on Railway with Composer platform requirement bypass
+# Base image
+FROM php:8.3-fpm
 
-# تثبيت الأدوات الأساسية التي يحتاجها Laravel
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
+# Set environment vars for Composer
+ENV COMPOSER_ALLOW_SUPERUSER=1 \
+    COMPOSER_MEMORY_LIMIT=-1
+
+# Install system dependencies and PHP extensions
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    build-essential \
     libpq-dev \
-    libpng-dev \
-    libonig-dev \
+    libzip-dev \
     libxml2-dev \
+    libonig-dev \
+    zlib1g-dev \
+    git \
+    unzip \
     zip \
-    unzip
+    curl \
+    && docker-php-ext-install pdo_pgsql zip xml mbstring bcmath \
+    && rm -rf /var/lib/apt/lists/*
 
-# تثبيت إضافات PHP الشائعة
-RUN docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd
-
-# تثبيت Composer (مدير حزم PHP)
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# تعيين مجلد العمل داخل الحاوية
+# Set working directory
 WORKDIR /app
 
-# نسخ كل ملفات المشروع إلى الحاوية
-COPY . .
+# Copy composer files for caching
+COPY composer.json composer.lock ./
 
-# تثبيت حزم المشروع باستخدام Composer
-RUN composer install --no-dev --no-interaction --optimize-autoloader
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
-# هذا السطر ليس مهماً جداً لأن Render سيستخدم أمر التشغيل الخاص به
-# لكن من الجيد وجوده كقيمة افتراضية
-CMD ["php", "artisan", "serve", "--host=0.0.0.0"]
+# Diagnose before install (for debug)
+RUN composer diagnose
+
+# Install PHP dependencies bypassing platform requirements
+RUN composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction --ignore-platform-reqs --verbose
+
+# Copy application source
+COPY . ./
+
+# Prepare environment and generate APP_KEY
+RUN cp .env.example .env \
+    && php artisan key:generate --ansi
+
+# Cache configuration and routes
+RUN php artisan config:cache \
+    && php artisan route:cache
+
+# Expose dynamic port
+EXPOSE ${PORT}
+
+# Define entrypoint and command
+ENTRYPOINT ["php", "artisan"]
+CMD ["serve", "--host=0.0.0.0", "--port=${PORT}"]
