@@ -1,4 +1,4 @@
-### Dockerfile for Laravel on Railway with Composer fixes
+### Dockerfile for Laravel on Railway with Composer platform requirement bypass
 # Base image
 FROM php:8.2-fpm
 
@@ -8,7 +8,7 @@ ENV COMPOSER_ALLOW_SUPERUSER=1 \
 
 # Install system dependencies and PHP extensions
 RUN apt-get update \
- && apt-get install -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     libzip-dev \
@@ -19,8 +19,8 @@ RUN apt-get update \
     unzip \
     zip \
     curl \
- && docker-php-ext-install pdo_pgsql zip xml mbstring bcmath \
- && rm -rf /var/lib/apt/lists/*
+    && docker-php-ext-install pdo_pgsql zip xml mbstring bcmath \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -31,22 +31,22 @@ COPY composer.json composer.lock ./
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
-# Diagnose before install (optional for debug)
+# Diagnose before install (for debug)
 RUN composer diagnose
 
-# Install PHP dependencies with verbose output
-RUN composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction --verbose
+# Install PHP dependencies bypassing platform requirements
+RUN composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction --ignore-platform-reqs --verbose
 
 # Copy application source
 COPY . ./
 
 # Prepare environment and generate APP_KEY
 RUN cp .env.example .env \
- && php artisan key:generate --ansi
+    && php artisan key:generate --ansi
 
 # Cache configuration and routes
 RUN php artisan config:cache \
- && php artisan route:cache
+    && php artisan route:cache
 
 # Expose dynamic port
 EXPOSE ${PORT}
