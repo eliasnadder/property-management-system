@@ -1,4 +1,4 @@
-### Dockerfile for Laravel on Railway with correct key generation and required PHP extensions
+### Dockerfile for Laravel on Railway with explicit ENTRYPOINT and CMD
 # Use official PHP image with FPM
 FROM php:8.2-fpm
 
@@ -19,22 +19,22 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
-# Install PHP dependencies
-# Ensure PHP extensions are installed before running composer
-RUN composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction --no-scripts
+# Install PHP dependencies (allow scripts to run for package discovery)
+RUN composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction
 
 # Copy application source
 COPY . ./
 
-# Copy sample env and generate APP_KEY
+# Ensure .env exists and generate APP_KEY
 RUN cp .env.example .env \
     && php artisan key:generate --ansi
 
-# Cache config and routes (optional but speeds up boot)
+# Cache config and routes for faster boot
 RUN php artisan config:cache && php artisan route:cache
 
 # Expose dynamic port from Railway
 EXPOSE ${PORT}
 
-# Start Laravel server on host 0.0.0.0 and dynamic port
-CMD ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=${PORT}"]
+# Set entrypoint and default command explicitly
+ENTRYPOINT ["php", "artisan"]
+CMD ["serve", "--host=0.0.0.0", "--port=${PORT}"]
