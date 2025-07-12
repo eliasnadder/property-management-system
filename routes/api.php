@@ -13,11 +13,10 @@ use App\Http\Controllers\FavoriteController;
 Route::post('/login', [UserController::class, 'login']);
 Route::post('/registerUser', [UserController::class, 'registerUser']);
 Route::post('/registerOffice', [OfficeController::class, 'registerOffice']);
-Route::post('/logout', [UserController::class, 'logout']);
+Route::post('/logout', [UserController::class, 'logout'])->middleware('api');
 
 
 //---------------------user-------------------------------------------------------------
-
 Route::group(['middleware' => ['api', 'jwt.auth'], 'prefix' => 'user'], function () {
     Route::get('/showOffice/{Id}', [OfficeController::class, 'showOffice']);
     Route::get('/getFollowersCount/{Id}', [OfficeController::class, 'getFollowersCount']);
@@ -94,7 +93,7 @@ Route::group(['middleware' => ['jwt.auth', 'admin'], 'prefix' => 'admin'], funct
     Route::get('/pandingRequest', [AdminController::class, 'pandingRequest']);
     Route::get('/approveProperty/{id}', [AdminController::class, 'approveProperty']);
     Route::get('/rejectProperty/{id}', [AdminController::class, 'rejectProperty']);
-    
+
     Route::get('/approveSubscription/{id}', [AdminController::class, 'approveSubscription']);
     Route::get('getOfficesByViews', [AdminController::class, 'getOfficesByViews']);
     Route::get('getOfficesByFollowers', [AdminController::class, 'getOfficesByFollowers']);
