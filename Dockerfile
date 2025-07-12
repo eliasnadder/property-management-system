@@ -1,4 +1,4 @@
-### Dockerfile for Laravel on Railway with explicit ENTRYPOINT and CMD
+### Dockerfile for Laravel on Railway with complete PHP extension support
 # Use official PHP image with FPM
 FROM php:8.2-fpm
 
@@ -6,11 +6,13 @@ FROM php:8.2-fpm
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     libzip-dev \
+    libxml2-dev \
+    zlib1g-dev \
     git \
     unzip \
     zip \
     curl \
-    && docker-php-ext-install pdo pdo_pgsql zip
+ && docker-php-ext-install pdo_pgsql zip xml mbstring bcmath
 
 # Set working directory
 WORKDIR /app
@@ -19,7 +21,7 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
-# Install PHP dependencies (allow scripts to run for package discovery)
+# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction
 
 # Copy application source
@@ -27,14 +29,14 @@ COPY . ./
 
 # Ensure .env exists and generate APP_KEY
 RUN cp .env.example .env \
-    && php artisan key:generate --ansi
+  && php artisan key:generate --ansi
 
-# Cache config and routes for faster boot
+# Cache config and routes
 RUN php artisan config:cache && php artisan route:cache
 
 # Expose dynamic port from Railway
 EXPOSE ${PORT}
 
-# Set entrypoint and default command explicitly
+# Set entrypoint and default command
 ENTRYPOINT ["php", "artisan"]
 CMD ["serve", "--host=0.0.0.0", "--port=${PORT}"]
